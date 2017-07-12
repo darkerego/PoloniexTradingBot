@@ -36,6 +36,9 @@ class poloniex:
         elif(command == "returnMarketTradeHistory"):
             ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + "returnTradeHistory" + '&currencyPair=' + str(req['currencyPair'])))
             return json.loads(ret.read())
+        elif(command == "returnChartData"):
+        	ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + command + '&currencyPair=' + str(req['currencyPair']) + '&start=' + str(req['start']) + '&end=' + str(req['end']) + '&period=' + str(req['period'])))
+        	return json.loads(ret.read())
         else:
             req['command'] = command
             req['nonce'] = int(time.time()*1000)
@@ -60,6 +63,9 @@ class poloniex:
  
     def returnOrderBook (self, currencyPair):
         return self.api_query("returnOrderBook", {'currencyPair': currencyPair})
+
+    def returnChartData(self, currencyPair, start, end, period):
+    	return self.api_query("returnChartData", {'currencyPair': currencyPair, 'period': period, 'start': start, 'end': end})
  
     def returnMarketTradeHistory (self, currencyPair):
         return self.api_query("returnMarketTradeHistory", {'currencyPair': currencyPair})
