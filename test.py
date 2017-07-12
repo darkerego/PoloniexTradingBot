@@ -2,6 +2,9 @@ class test():
 	btc = 1.0
 	alt = 0.0
 
+	def balance(self):
+		return self.btc
+
 	def buy(self, price):
 		self.alt = self.btc / price
 		self.btc = 0

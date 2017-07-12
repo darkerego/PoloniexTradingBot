@@ -40,7 +40,8 @@ def main():
 		print 'Last price : %s' %(lastPrice)
 		print 'EMA 1 : %s' %ema1
 		print 'EMA 2 : %s' %ema2
-		print 'Value : %s' %demo.value((lastPrice))
+		print 'Value : %s' %demo.value(lastPrice)
+		print 'Balance : %s' %demo.balance()
 		print 'Buy target : %s' %buyTarget
 		print 'Sell target : %s' %sellTarget
 		if demo.btc > 0:
