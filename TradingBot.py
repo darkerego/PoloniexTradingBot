@@ -15,8 +15,10 @@ def sum(array):
 
 def main():
 	sellTarget = 0.0
+	minPrice = 0.0
 	interval = 30
-	pair = 'BTC_ETH'
+	altCoin = 'ETH'
+	pair = 'BTC_' + altCoin
 	data = poloniex('', '')
 	demo = test()
 	while True:
@@ -45,16 +47,31 @@ def main():
 		print 'Buy target : %s' %buyTarget
 		print 'Sell target : %s' %sellTarget
 		if demo.btc > 0:
-			if lastPrice < buyTarget:
-				demo.buy((lastPrice))
-				sellTarget = lastPrice * 1.0125
-				print 'Buy price : %s' %lastPrice
-				print 'Sell target : %s' %sellTarget
+			if (lastPrice < buyTarget):
+				if (minPrice != 0) & (lastPrice > minPrice * 1.0001):
+					demo.buy((lastPrice))
+					sellTarget = lastPrice * 1.0125
+					minPrice = 0.0
+					maxPrice = 0.0
+					print 'Buy price : %s' %lastPrice
+					print 'Sell target : %s' %sellTarget
+				else:
+					if minPrice != 0:
+						minPrice = min(minPrice, lastPrice)
+					else:
+						minPrice = lastPrice
+			else:
+				minPrice = 0.0
 		else:
 			if lastPrice > sellTarget:
-				demo.sell(lastPrice)
-				print 'Sell price : %s' %lastPrice
-				sellTarget = 0.0
+				if lastPrice < maxPrice * 0.9999:
+					demo.sell(lastPrice)
+					print 'Sell price : %s' %lastPrice
+					sellTarget = 0.0
+				else:
+					maxPrice = max(maxPrice, sellTarget)
+			else:
+				maxPrice = 0.0
 		print '***************************************************'
 
 

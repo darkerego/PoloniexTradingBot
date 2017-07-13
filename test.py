@@ -1,12 +1,13 @@
 class test():
 	btc = 1.0
 	alt = 0.0
+	fee = 0.0025
 
 	def balance(self):
 		return self.btc
 
 	def buy(self, price):
-		self.alt = self.btc / price
+		self.alt = (self.btc / price) * (1 - self.fee)
 		self.btc = 0
 		return 0
 
