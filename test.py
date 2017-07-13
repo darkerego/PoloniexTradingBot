@@ -1,7 +1,7 @@
 class test():
 	btc = 1.0
 	alt = 0.0
-	fee = 0.0025
+	fee = 0.005
 
 	def balance(self):
 		return self.btc

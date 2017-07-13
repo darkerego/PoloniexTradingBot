@@ -35,7 +35,7 @@ def main():
 			ema1 += (chartClose[i] - ema1) * 2 / 17
 		for i in range(24,32):
 			ema2 += (chartClose[i] - ema2) * 2 / 9
-		buyTarget = (min(ema1, ema2) * 0.999)
+		buyTarget = (min(ema1, ema2) * 0.99)
 		#ema2 = data.returnChartData(pair, timeNow - 7200, timeNow, 900)[-1]['weightedAverage']
 		print '{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair)
 		print 'Last price : %s' %(lastPrice)
@@ -45,11 +45,11 @@ def main():
 		print 'Balance : %s' %demo.balance()
 		print 'Buy target : %s' %buyTarget
 		print 'Sell target : %s' %sellTarget
-		if demo.btc > 0:
+		if demo.balance() > 0:
 			if (lastPrice < buyTarget):
-				if (minPrice != 0) & (lastPrice > minPrice * 1.001):
+				if (minPrice != 0) & (lastPrice > minPrice * 1.01):
 					demo.buy((lastPrice))
-					sellTarget = lastPrice * 1.0125
+					sellTarget = lastPrice * 1.01
 					minPrice = 0.0
 					maxPrice = 0.0
 					print 'Buy price : %s' %lastPrice
