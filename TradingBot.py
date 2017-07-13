@@ -17,8 +17,7 @@ def main():
 	sellTarget = 0.0
 	minPrice = 0.0
 	interval = 30
-	altCoin = 'ETH'
-	pair = 'BTC_' + altCoin
+	pair = 'BTC_ETH'
 	data = poloniex('', '')
 	demo = test()
 	while True:
@@ -48,7 +47,7 @@ def main():
 		print 'Sell target : %s' %sellTarget
 		if demo.btc > 0:
 			if (lastPrice < buyTarget):
-				if (minPrice != 0) & (lastPrice > minPrice * 1.0001):
+				if (minPrice != 0) & (lastPrice > minPrice * 1.001):
 					demo.buy((lastPrice))
 					sellTarget = lastPrice * 1.0125
 					minPrice = 0.0
@@ -64,7 +63,7 @@ def main():
 				minPrice = 0.0
 		else:
 			if lastPrice > sellTarget:
-				if lastPrice < maxPrice * 0.9999:
+				if lastPrice < maxPrice * 0.999:
 					demo.sell(lastPrice)
 					print 'Sell price : %s' %lastPrice
 					sellTarget = 0.0
