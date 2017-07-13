@@ -17,7 +17,7 @@ def main():
 	sellTarget = 0.0
 	minPrice = 0.0
 	interval = 30
-	pair = 'BTC_ETH'
+	pair = 'BTC_ETC'
 	data = poloniex('', '')
 	demo = test()
 	while True:
