@@ -47,7 +47,7 @@ def main():
 		print 'Sell target : %s' %sellTarget
 		if demo.balance() > 0:
 			if (lastPrice < buyTarget):
-				if (minPrice != 0) & (lastPrice > minPrice * 1.01):
+				if (minPrice != 0) & (lastPrice > minPrice * 1.002):
 					demo.buy((lastPrice))
 					sellTarget = lastPrice * 1.01
 					minPrice = 0.0
