@@ -16,8 +16,9 @@ def sum(array):
 def main():
 	sellTarget = 0.0
 	minPrice = 0.0
+	maxPrice = 0.0
 	interval = 30
-	pair = 'BTC_ETC'
+	pair = 'BTC_LTC'
 	data = poloniex('', '')
 	demo = test()
 	while True:
@@ -38,13 +39,15 @@ def main():
 		buyTarget = (min(ema1, ema2) * 0.99)
 		#ema2 = data.returnChartData(pair, timeNow - 7200, timeNow, 900)[-1]['weightedAverage']
 		print '{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair)
-		print 'Last price : %s' %(lastPrice)
-		print 'EMA 1 : %s' %ema1
-		print 'EMA 2 : %s' %ema2
-		print 'Value : %s' %demo.value(lastPrice)
-		print 'Balance : %s' %demo.balance()
-		print 'Buy target : %s' %buyTarget
-		print 'Sell target : %s' %sellTarget
+		print 'Last price : %.8f' %(lastPrice)
+		print 'EMA 1 : %.8f' %ema1
+		print 'EMA 2 : %.8f' %ema2
+		print 'Value : %.8f' %demo.value(lastPrice)
+		print 'Balance : %.8f' %demo.balance()
+		print 'Buy target : %.8f' %buyTarget
+		print 'Sell target : %.8f' %sellTarget
+		print 'Buy limit : %.8f' %(minPrice * 1.002)
+		print 'Sell limit : %.8f' %(maxPrice * 0.999)
 		if demo.balance() > 0:
 			if (lastPrice < buyTarget):
 				if (minPrice != 0) & (lastPrice > minPrice * 1.002):
@@ -52,8 +55,8 @@ def main():
 					sellTarget = lastPrice * 1.01
 					minPrice = 0.0
 					maxPrice = 0.0
-					print 'Buy price : %s' %lastPrice
-					print 'Sell target : %s' %sellTarget
+					print 'Buy price : %.8f' %lastPrice
+					print 'Sell target : %.8f' %sellTarget
 				else:
 					if minPrice != 0:
 						minPrice = min(minPrice, lastPrice)
@@ -65,10 +68,10 @@ def main():
 			if lastPrice > sellTarget:
 				if lastPrice < maxPrice * 0.999:
 					demo.sell(lastPrice)
-					print 'Sell price : %s' %lastPrice
+					print 'Sell price : %.8f' %lastPrice
 					sellTarget = 0.0
 				else:
-					maxPrice = max(maxPrice, sellTarget)
+					maxPrice = max(maxPrice, lastPrice)
 			else:
 				maxPrice = 0.0
 		print '***************************************************'
