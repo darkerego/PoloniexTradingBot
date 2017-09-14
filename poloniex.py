@@ -1,3 +1,5 @@
+""" Warning: this code is deprecated, see the README! """
+
 import urllib
 import urllib2
 import json
