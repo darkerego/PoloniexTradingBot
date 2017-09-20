@@ -5,9 +5,9 @@
 <p> You need the real poloniex api, get it from here: https://github.com/darkerego/python-poloniex </p>
 
 <pre>
-python TradingBot44.py -h
+python TradingBot.py -h
 Darkerego's Trade Bot
-usage: TradingBot44.py [-h] [-p PAIR] [-i INTERVAL] [-b AMOUNT_BUY]
+usage: TradingBot.py [-h] [-p PAIR] [-i INTERVAL] [-b AMOUNT_BUY]
                        [-s AMOUNT_SELL] [-v] [-m MODE] [-d]
 
 Poloniex Trading Bot
