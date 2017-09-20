@@ -119,13 +119,13 @@ def main(argv):
                 chartClose[i] = float(chartClose[i])
                 ema1 += (chartClose[i] - ema1) * 2 / 17
             except:
-                print('FATAL: cannot get charts')
+                print('FATAL: cannot get charts. Check system clock, if issue persists than generate a new api-key.')
                 pass
         for i in range(24,32):
             try:
                 ema2 += (chartClose[i] - ema2) * 2 / 9
             except:
-                print('FATAL: cannot get charts')
+                print('FATAL: cannot get charts. Check system clock, if issue persists than generate a new api-key')
                 pass
 
 
@@ -238,6 +238,7 @@ def main(argv):
             diffPercent = percentage(lastAsk, lastBid)
             if debug: print ("DEBUG: Difference Percentage %.8f: " % diffPercent)
             amt = (bal1 * 0.99)
+            # make at least a half a percent. logic needs work.
             if mode == "positive" and diffPercent >= 100.5:
                 try:
                     data.sell(pair, sellTarget, amt)
@@ -254,7 +255,7 @@ def main(argv):
                    
                     if sellTarget == 0.0:
                         sellTarget == (maxEMA * 1.05)
-                    if debug: print("DEBUG maxEMA x 0.999: %.8f" % (maxPrice * 0.999))
+                    if debug: print("DEBUG maxPrice x 0.999: %.8f" % (maxPrice * 0.999))
                     if lastPrice < maxPrice:
                     
                         if debug: print("DEBUG: lastPrice less than sell price!")
