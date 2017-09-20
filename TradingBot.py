@@ -1,5 +1,11 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
+
+print("""
+WARNING: This code is still a mess, in alpha stages. Technically it works, and makes some money,
+but it's pretty untested, so use at your own risk.
+""")
+
 import datetime
 import time
 import argparse
