@@ -67,7 +67,7 @@ def main(argv):
 	cpair = pair.split('_')
 	coin0 = cpair[0]
 	coin1 = cpair[1]
-        data = poloniex.Poloniex('38ZEYOAO-HY2UR4YG-R2VXRPRN-8S3GZD5S', 'fb7ab89561342c9090c51447fc2c68c2fde65a60f5a8c88c1a97ea993428449828e8a2e169302b62bd79b2a3b714587dd31cadc07ab9a96a8d99df846e1f982a')
+        data = poloniex.Poloniex('', '')
 	#demo = test()
 	while True:
 		chartClose = []
