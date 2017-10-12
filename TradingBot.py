@@ -1,291 +1,262 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-print("""
-WARNING: This code is still a mess, in alpha stages. Technically it works, and makes some money,
-but it's pretty untested, so use at your own risk.
-""")
-
 import datetime
 import time
 import argparse
 import sys
+
 try:
-    # For Python 3+
-    from configparser import ConfigParser, NoSectionError
+	# For Python 3+
+	from configparser import ConfigParser, NoSectionError
 except ImportError:
-    # Fallback to Python 2.7
-    from ConfigParser import ConfigParser, NoSectionError
-else:
-    print("I hate python3! But if you insist...")
+	# Fallback to Python 2.7
+	from ConfigParser import ConfigParser, NoSectionError
+
 import poloniex
+from termcolor import colored
+#from poloniex import poloniex
+#from test import test
+debug = False
 def createTimeStamp(datestr, format="%Y-%m-%d %H:%M:%S"):
     return time.mktime(time.strptime(datestr, format))
+
 def sum(array):
-    ret = float(0.0)
-    for x in array:
-        x = float(x)
-        #ret = float(ret)
-        ret += x
-    return ret
+	ret = float(0.0)
+	for x in array:
+		x = float(x)
+		#ret = float(ret)
+		ret += x
+	return ret
 
-def percentage(part, whole):
-  return 100 * float(part)/float(whole)
 
-from termcolor import colored
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='Poloniex Trading Bot')
-    parser.add_argument('-p', '--pair', default='BTC_ETH', type=str, required=False, help='Coin pair to trade between [default: BTC_ETH]')
-    parser.add_argument('-i', '--interval', default=5, type=float, required=False, help='seconds to sleep between loops [default: 1]')
-    parser.add_argument('-b', '--amount_buy', default=0.99, type=float, required=False, help='percentage of balances to buy/sell [default: 0.99]')
-    parser.add_argument('-s', '--amount_sell', default=1.02, type=float, required=False, help='percentage of balances to buy/sell [default: 1.02]')
-    parser.add_argument('-v', '--verbose', default=False, action='store_true', required=False, help='enables verbose console messages')
-    parser.add_argument('-m', '--mode', default='normal', type=str, required=False, help='mode: positive (smaller propfit more often) or normal')
-    parser.add_argument('-d', '--debug', default=False, action='store_true', required=False, help='enables extra console messages (for debugging)')
+	parser = argparse.ArgumentParser(description='Poloniex Trading Bot')
+	parser.add_argument('-p', '--pair', default='BTC_ETH', type=str, required=False, help='Coin pair to trade between [default: BTC_ETH]')
+	parser.add_argument('-i', '--interval', default=1, type=float, required=False, help='seconds to sleep between loops [default: 1]')
+	parser.add_argument('-a', '--amount', default=1.01, type=float, required=False, help='amount to buy/sell [default: 1.01]')
+	parser.add_argument('-v', '--verbose', action='store_true', required=False, help='enables extra console messages (for debugging)')
+        parser.add_argument('-D', '--dry_run', action='store_true', required=False, help='Do not actually trade (for debugging)')
+        parser.add_argument('-o', '--override', action='store_true', required=False, help='Sell anyway, do not wait to buy first. (for debugging)')
 
-    args = parser.parse_args()
-    
-    lastAsk = 0.0
-    lastBid = 0.0
-    sellTarget = 0.0
-    minPrice = 0.0
-    maxPrice = 0.0
-    interval = args.interval
-    pair = args.pair
-    #amt = args.amount
-    #amt = float(amt)
-    amount_buy = args.amount_buy
-    amount_sell = args.amount_sell
-    amount_buy = float(amount_buy)
-    amount_sell = float(amount_sell)
-    mode = args.mode
-    mode = str(mode)
-    print("Mode: %s : " % mode)
-    verbose = args.verbose
-    debug = args.debug
-    cpair = pair.split('_')
-    coin0 = cpair[0]
-    coin1 = cpair[1]
-    data = poloniex.Poloniex('your-api-key', 'your-api-secret')
-    #demo = test()
-    
-    while True:
-        chartClose = []
-        timeNow = int(createTimeStamp('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())))
-        if timeNow % 900 != 0:
-            timeNow = timeNow / 900 * 900
-        try:
-            lastPrice = float(data.returnTicker()[pair]['last'])
-        except Exception as e:
-            print("ERROR: "+str(e))
-            break
-        # period 900
-        try:
-            chartData = data.returnChartData(pair, 900, timeNow - 28800, timeNow)
-        except Exception as e:
-            print("ERROR: %s " % str(e))
-            break
-        
-        
-        for candle in chartData:
-                try:
-                        chartClose.append(candle['close'])
-                        #if debug: print(chartClose)
-                except:
-                        pass
-        
+	args = parser.parse_args()
 
-
-        ema1 = (sum(chartClose[0:16]) / 16)
-        ema1_ = ema1
-        ema2 = (sum(chartClose[16:24]) / 8)
-        try:
-            avg = data.returnChartData(pair, 900, timeNow - 7200, timeNow)[-1]['weightedAverage']
-            avg = float(avg)
-        except:
-            pass
-        # Double exponential moving average at period 900
-        try:
-            DEMA = ( 2 * ema1) * (ema1 * (ema1 * 900) )
-        except Exception as e:
-            print(e)
-
-
-        #if debug: print('EMA3 :%s' % ema3)
-        for i in range(16,32):
-            try:
-                chartClose[i] = float(chartClose[i])
-                ema1 += (chartClose[i] - ema1) * 2 / 17
-            except:
-                print('FATAL: cannot get charts. Check system clock, if issue persists than generate a new api-key.')
-                pass
-        for i in range(24,32):
-            try:
-                ema2 += (chartClose[i] - ema2) * 2 / 9
-            except:
-                print('FATAL: cannot get charts. Check system clock, if issue persists than generate a new api-key')
-                pass
-
-
-        
-        minEma = min(ema1, ema2)
-        maxEma = max(ema1,ema2)
-        if debug: print("DEBUG: min average: %s" % minEma)
-        if debug: print("DEBUG: max average: %s" % maxEma)
-        if debug: print("DEBUG: average: %s" % avg)
-        buyTarget = minEma * amount_buy
-        sellTarget = maxEma * amount_sell
-        
-
-        
-        diff = (sellTarget - buyTarget)
-        orderBook = data.returnOrderBook(pair)
-        lastAsk_ = orderBook['asks'][0]
-        lastBid_ = orderBook['bids'][0]
-        lastAsk = float(lastAsk_[0])
-        lastBid = float(lastBid_[0])
-        try:
-            balances = data.returnAvailableAccountBalances()
-        except Exception as e1:
-            print('ERROR: %s' % e1)
+	sellTarget = 0.0
+	minPrice = 0.0
+	maxPrice = 0.0
+	bought_at = 0.0
+	bought_value = 0.0
+	override = args.override
+	if override:
+            override = True
         else:
-            try:
-                bal0 = balances['exchange'][coin0]
-            except KeyError as e:
-                if debug: print(e)
-                bal0 = float(0.0)
-            else:
-                bal0 = float(bal0)
+            override = False
+	interval = args.interval
+	pair = args.pair
+	amt = args.amount
+        amt = float(amt)
+        dry = args.dry_run
+        if dry:
+            dry_run=True
+        else:
+            dry_run=False
+        verbose = args.verbose
+        if verbose:
+            verbose = True
+	cpair = pair.split('_')
+	coin0 = cpair[0]
+	coin1 = cpair[1]
+        data = poloniex.Poloniex('38ZEYOAO-HY2UR4YG-R2VXRPRN-8S3GZD5S', 'fb7ab89561342c9090c51447fc2c68c2fde65a60f5a8c88c1a97ea993428449828e8a2e169302b62bd79b2a3b714587dd31cadc07ab9a96a8d99df846e1f982a')
+	#demo = test()
+	while True:
+		chartClose = []
+		timeNow = int(createTimeStamp('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())))
+		if timeNow % 900 != 0:
+			timeNow = timeNow / 900 * 900
+		lastPrice = float(data.returnTicker()[pair]['last'])
+		chartData = data.returnChartData(pair, 900, timeNow - 28800, timeNow)
+		for candle in chartData:
+			chartClose.append(candle['close'])
+			#if debug:
+			    #print(chartClose)
+		
+		ema1 = sum(chartClose[0:16]) / 16
+		#ema1 = float(ema1)
+		
+		if debug:
+ 		    print("ema1: "+str(ema1))
+		ema2 = sum(chartClose[16:24]) / 8
+		for i in range(16,32):
+                        try:
+			    chartClose[i] = float(chartClose[i])
+			except IndexError:
+                            if verbose: print(colored("FATAL! Chart data out of range!", 'red'))
+                            pass
+                        try:
+			    ema1 += (chartClose[i] - ema1) * 2 / 17
+			except IndexError:
+                             if verbose: print(colored("FATAL! Chart data out of range!", 'red'))
+                             pass
+		for i in range(24,32):
+                        try:
+			    ema2 += (chartClose[i] - ema2) * 2 / 9
+			except IndexError:
+                             if verbose: print(colored("FATAL! Chart data out of range!", 'red'))
+                             pass
+		try:
+                    ema3 = data.returnChartData(pair,900, timeNow - 28800, timeNow)[-1]['weightedAverage']
+                except:
+                    pass
+                if bought_at == 0:
+		    buyTarget = min(ema1, ema2) * (amt * 0.98)
+		    
+		else:
+                    buyTarget = bought_at * (amt * 0.98)
+		    sellTarget = bought_at * amt
+		try:
+		    _bal = data.returnAvailableAccountBalances()['exchange'][coin0]
+		except KeyError:
+		    print('Likely balance is 0')
+		    _bal = float(0.0)
+		else:
+		    _bal = float(_bal)
 
-            try:
-                bal1 = balances['exchange'][coin1]
-            except KeyError:
-                bal1 = float(0.0)
-            else:
-                bal1 = float(bal1)
-        value = bal0 + (bal1 * lastBid)
-        #amtBuy = bal0 * amt
-        #amtSell = bal1 * amt
+		try:
+		    bal = data.returnAvailableAccountBalances()['exchange'][coin1]
+		except KeyError:
+		    if debug:
+		        print('Likely balance is 0')
+		    bal = float(0.0)
+		else:
+		    bal = float(bal)
 
-
-
-        if verbose: print('Verbose mode is on')
-        pair_ = colored(str(pair), 'yellow')
-        print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair_))
-        print('Last price : ')+ colored('%.8f' %(lastPrice), 'magenta',attrs=['blink'])
-        print('Current ask : ')+ colored('%.8f' %(lastAsk), 'blue')
-        print('Current bid : ')+ colored('%.8f' %(lastBid), 'cyan')
-        print('EMA 1 : %.8f' %ema1)
-        print('EMA 2 : %.8f' %ema2)
-        #if debug: print('EMA min: %.8f')% minEma
-        #print('- - - - - - - - - - - - - - - - - - - - - - - - - ')
-        if debug: print('EMA Average: %.8f' %avg)
-        #print('DEMA: %.8f' %DEMA)
-        print('%s Value : %.8f' %(coin1,value))
-        bal0_ = colored(float(bal0), 'cyan')
-        print('%s Balance : %s' % (coin0,bal0_))
-        bal1_ = colored(float(bal1), 'blue')
-        print('%s Balance: %s' % (coin1,bal1_))
-        if debug: print("Difference: %.8f" % diff)
-        buyTarget_=colored(float(buyTarget), 'green')
-        print('Buy target : %s' %buyTarget_)
-        sellTarget_=colored(float(sellTarget), 'red')
-        print('Sell target : %s' %sellTarget_)
-        print('Buy limit : %.8f' %(minPrice * 1.002))
-        print('Sell limit : %.8f' %(maxPrice * 0.99))
-        
-        
-        if bal0 > 0.001:
-            if debug: print("DEBUG: Positive %s balance %s " % (coin0,bal0))
-            if (lastPrice < buyTarget):
-                if debug: print('DEBUG: lastPrice < buyTarget...')
-                if (minPrice != 0) and (lastPrice > minPrice * 1.002):
-                    print('DEBUG: minPrice is not 0')
-                    buyAt = float(lastAsk * 1.0002)
-                    if (lastPrice >= buyTarget):
-                        if debug: print("DEBUG: minPrice greater than 0 and lastPrice > minPrice x min")
-                        amt = (float(bal0) * 0.99)
-                        
-                        if verbose: print('Atemption to buy at %s ..' % buyAt)
-                        if bal0 > 0.00005:
-                            try:
-                                data.buy(pair, lastPrice, amt)
-                            except Exception as e:
-                                print("Failed to buy with error : %s" % e)
-                            else:
-                                # since we just bought , try to make at least 5%
-                                sellTarget = lastBid * 1.05
-                                print(colored('Buy Price : %.8f'%lastPrice), 'red')
-                                print('Buy price : %.8f' %lastPrice)
-                                print(colored('Sell target : %.8f' %sellTarget), 'green')
-                            minPrice = 0.0
-                            maxPrice = 0.0
-                else:
-                        
-                        if minPrice == 0:
-                            minPrice = min(minPrice, lastPrice)
-                        else:
-                            minPrice = lastPrice
+		diff = (sellTarget - buyTarget)
+		value = bal * lastPrice
+                #value = str(value)
+		pair_ = colored(str(pair), 'yellow')
+		"""
+		print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair))
+		print('Last price : %.8f' %(lastPrice))
+		print('EMA 1 : %.8f' %ema1)
+		print('EMA 2 : %.8f' %ema2)
+                print('EMA 3 : %s' %(ema3))
+		print('Value : %.8f' %(value))
+		print('%s Balance : %.8f' % (coin0,_bal))
+		print('%s Balance: %.8f' % (coin1,bal))
+		print('Buy target : %.8f' %buyTarget)
+		print('Sell target : %.8f' %sellTarget)
+		print('Buy limit : %.8f' %(minPrice * 1.002))
+		print('Sell limit : %.8f' %(maxPrice * 0.999))
+		"""
                 
-               
-            else:
-                minPrice = 0.0
-                
-        if bal1 > 0.0001:
-            if debug: print("DEBUG: Positive %s balance: %s" % (coin1, bal1))
-            diffPercent = percentage(lastAsk, lastBid)
-            if debug: print ("DEBUG: Difference Percentage %.8f: " % diffPercent)
-            amt = (bal1 * 0.99)
-            # make at least a half a percent. logic needs work.
-            if mode == "positive" and diffPercent >= 100.5:
-                try:
-                    data.sell(pair, sellTarget, amt)
-                    amt1 = float(bal)
-                    print(colored("Selling %s %s"% (amt1,coin1)), 'red')
-                except Exception as lol:
-                    if debug: print("DEBUG: %s" % lol)
-                    sellTarget=str(sellTarget)
-                    print(colored('Sell price : %s' %sellTarget), 'green')
-                    sellTarget = 0.0
-            else:
-                if lastPrice > sellTarget:
-                    if debug:print("DEBUG: lastprice is greater than selltarget")
-                   
-                    if sellTarget == 0.0:
-                        sellTarget == (maxEMA * 1.05)
-                    if debug: print("DEBUG maxPrice x 0.999: %.8f" % (maxPrice * 0.999))
-                    if lastPrice < maxPrice:
+                print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair_))
+                print('Last price : ')+ colored('%.8f' %(lastPrice), 'magenta',attrs=['blink'])
+                #print('Current ask : ')+ colored('%.8f' %(lastAsk), 'blue')
+                #print('Current bid : ')+ colored('%.8f' %(lastBid), 'cyan')
+                print('EMA 1 : %.8f' %ema1)
+                print('EMA 2 : %.8f' %ema2)
+                print('EMA 3 : %s' %(ema3))
+                print('%s Value : %.8f' %(coin1,value))
+                bal0_ = colored(float(_bal), 'cyan')
+                print('%s Balance : %s' % (coin0,bal0_))
+                bal1_ = colored(float(bal), 'blue')
+                print('%s Balance: %s' % (coin1,bal1_))
+                if verbose: print("Difference: %.8f" % diff)
+                buyTarget_=colored(float(buyTarget), 'green')
+                print('Buy target : %s' %buyTarget_)
+                if bought_at != 0 :
+                    bought_at_ = colored(bought_at, 'green', attrs=['dark'])
+                    print("Bought at : %s " % bought_at_)
+                if bought_value:
+                   bought_value_ = colored(bought_at, 'yellow', attrs=['dark'])
+                   print("Bought value : %s " % bought_value_)
                     
-                        if debug: print("DEBUG: lastPrice less than sell price!")
-                        if bal1 >= 0.00001:
-                            if debug: print("DEBUG: MaxEMA : %.8f" % maxEMA)
-                        
+                sellTarget_=colored(float(sellTarget), 'red')
+                print('Sell target : %s' %sellTarget_)
+                print('Buy limit : %.8f' %(minPrice * 0.99))
+                print('Sell limit : %.8f' %(maxPrice * 0.99))
+		
+		if _bal > 0.0001:
+			if (float(lastPrice) <= float(buyTarget) * 0.99 ):
+                                if verbose: print("DEBUG: %s lt %s" % (lastPrice,buyTarget))
+                                #
+                                if dry_run:
+                                            print("Not buying because dry_run is specified")
+                                            pass
+                                else:
+                                        
+                                        if (minPrice != 0) and (lastPrice > minPrice):
+                                                if verbose: print("Attempting to buy...")
+                                                
+                                                if _bal > 0:
+                                                    if not dry_run:
+                                                        if verbose: print(colored("Buying...",'green'))
+                                                        try:
+                                                            amt_ = float(_bal) / float(lastPrice) * 0.99
+                                                            data.buy(pair, (lastPrice * 1.0000001), amt_, orderType="postOnly")
+                                                            bought_at = float(lastPrice)
+                                                            bought_value = float(value)
+                                                        except Exception as ee:
+                                                            if verbose: print('Error: %s' % ee)
+                                                        else:
 
-                            if verbose: print('INFO: Atemption to sell at %s ..' % sellTarget)
-                            try:
-                                data.sell(pair, sellTarget, amt)
-                                amt1 = float(bal1)
-                                print(colored("Selling %s %s"% (amt1,coin1)), "red")
-                            except Exception as lol:
-                                if debug: print("DEBUG: %s" % lol)
-                            else:
-                                sellTarget_ = colored(sellTarget, 'green')
-                                print(colored('Sell price : %s' %sellTarget_), "green")
-                                sellTarget = 0.0
-                    else:
-                        if verbose: print("INFO: Did not sell, %s less than %s" % (lastPrice,sellTarget))
-                        maxPrice = max(maxPrice, lastPrice)
-                else:
-                    maxPrice = 0.0
-        print('***************************************************')
+                                                            sellTarget = bought_at * amt
+                                                            sT = str(colored(sellTarget, 'red'))
+                                                            print(colored("Bought! Sell Target: %s" % sT, 'green'))
+                                                            minPrice = 0.0
+                                                            maxPrice = 0.0
+                                                            print('Buy price : %.8f' %lastPrice)
+                                                            print('Sell target : %.8f' %sellTarget)
+                                        else:
+                                                if verbose: print("Not buying...")
+                                                if minPrice != 0:
+                                                        minPrice = min(minPrice, lastPrice)
+                                                else:
+                                                        minPrice = lastPrice
+			else:
+				minPrice = 0.0
+		if bought_at != 0 or override or bal > 0.0001 or bought_value > value:
+                        if verbose: print("Perhaps selling...")
+                        if bought_at == 0:    
+                            sellTarget = (max(ema1, ema2) * amt)
+                        else:
+                            sellTarget = bought_at * amt
+		#else:
+			if lastPrice >= sellTarget or bought_value > value:
+				if (lastPrice < maxPrice * amt) or lastPrice >= (bought_at * amt):
+                                        
+                                        if dry_run:
+                                            print("Not selling because dry_run is specified")
+                                            pass
+                                        else:
+                                                if verbose: print(colored("Selling...", 'red'))
+                                                try:
+                                                    data.sell(pair, (lastPrice * 1.0000001), (bal * 0.99), orderType="postOnly")
+                                                except Exception as lol:
+                                                    lol = colored(lol, 'white')
+                                                    print(colored("FATAL : %s", 'red')  % lol)
+                                                    
+                                                else:
+                                                    print('Sell price : %.8f' %lastPrice)
+                                                    sellTarget = 0.0
+				else:
+					maxPrice = max(maxPrice, lastPrice)
+			else:
+				maxPrice = 0.0
+		print('***************************************************')
 
 
 
-
-        time.sleep(float(interval))
-
+                try:
+		     time.sleep(int(interval))
+		except KeyboardInterrupt:
+                     print("Caught Signal, exiting...")
+                     sys.exit(0)
+                     
 if __name__ == "__main__":
-    print colored('Darkerego\'s', 'red'), colored('Trade Bot', 'green')
-    main(sys.argv[1:])
+        try:
+	    main(sys.argv[1:])
+	except KeyboardInterrupt:
+            print("Caught Signal, exiting...")
+            sys.exit(0)
