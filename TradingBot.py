@@ -34,9 +34,9 @@ secret = False # change to your api key
 key = False # change to your api secret
 
 def main(argv):
-if not secret and key:
-    print("First you must edit me and set your api key!")
-    sys.exit(1)
+        if not secret and key:
+            print("First you must edit me and set your api key!")
+            sys.exit(1)       
 
 	parser = argparse.ArgumentParser(description='Poloniex Trading Bot')
 	parser.add_argument('-p', '--pair', default='BTC_ETH', type=str, required=False, help='Coin pair to trade between [default: BTC_ETH]')
