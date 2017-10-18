@@ -1,4 +1,4 @@
-""" Warning: this code is deprecated, see the README! """
+""" Warning: this code is deprecated, don't actually use this. See the README! """
 
 import urllib
 import urllib2
