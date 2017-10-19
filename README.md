@@ -1,5 +1,6 @@
 # TradingBot
 
+*This is a Proof of Concept, still in development, do not use in production with lots money! *
 
 <p> I have made some improvements to the initial code. I am still not certain if this this bot actually makes money or not. </p>
 <p> Update: The bot does profit in upward trending markets, so that is a good start. </p>
