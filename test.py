@@ -1,3 +1,5 @@
+""" For example/historical/educational/testing/development usage. Does not actually do anything. """
+
 class test():
 	btc = 1.0
 	alt = 0.0
