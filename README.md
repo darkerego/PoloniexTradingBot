@@ -1,4 +1,4 @@
-# TradingBot
+# Poloniex TradingBot
 
 <i>This is a Proof of Concept, still in development, do not use in production with lots money! </i>
 
