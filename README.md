@@ -2,6 +2,15 @@
 
 
 <p> I have made some improvements to the initial code. I am still not certain if this this bot actually makes money or not. </p>
+<p> Update: The bot does profit in upward trending markets, so that is a good start. </p>
+### Project Goals:
+
+- To create a poloniex trading bot that uses simple math to trade across poloniex's btc and usdt markets.
+- TODO: Create a function that checks if at any given moment it is profitable to buy from a usdt market and sell to btc market
+ - or vice versa, this also should work on other markets such as ETH/ETC or LTC/XMR
+
+
+
 <p> You need the good poloniex api : [https://github.com/s4w3d0ff/python-poloniex] and termcolor, see the requirements.txt.  </p>
 
 
