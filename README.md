@@ -2,7 +2,7 @@
 
 
 <p> I have made some improvements to the initial code. I am still not certain if this this bot actually makes money or not. </p>
-<p> You need the real poloniex api, get it from here: https://github.com/darkerego/python-poloniex </p>
+<p> You need the [good poloniex api](https://github.com/s4w3d0ff/python-poloniex) and termcolor, see the requirements.txt.  </p>
 
 <pre>
 python TradingBot.py -h
