@@ -23,6 +23,8 @@ pip install -r requirements.txt
 python TradingBot.py -D
 </pre>
 
+###### Sample Run:
+
 <img src="https://s1.postimg.org/72owgckzcf/botsample.png"></img>
 
 
@@ -50,5 +52,4 @@ optional arguments:
 
 </pre>
 
-### Sample Run:
 
