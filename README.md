@@ -9,9 +9,21 @@
 - TODO: Create a function that checks if at any given moment it is profitable to buy from a usdt market and sell to btc market
  - or vice versa, this also should work on other markets such as ETH/ETC or LTC/XMR
 
+### Usage:
 
+<p> First, create a poloniex API key and add your secret and key to the config file `api_conf.py`. </p>
+<p> Next, install the requirements: </p>
+<p> (You need the good poloniex api : [https://github.com/s4w3d0ff/python-poloniex] and termcolor, see the requirements.txt.)  </p>
 
-<p> You need the good poloniex api : [https://github.com/s4w3d0ff/python-poloniex] and termcolor, see the requirements.txt.  </p>
+<pre>
+pip install -r requirements.txt
+</pre>
+<p> Finally, try a dry run to see the bot in action </p>
+<pre>
+python TradingBot.py -D
+</pre>
+
+<img src="https://s1.postimg.org/72owgckzcf/botsample.png"></img>
 
 
 <pre>
@@ -37,6 +49,6 @@ optional arguments:
                         default=False
 
 </pre>
+
 ### Sample Run:
 
-<img src="https://s1.postimg.org/72owgckzcf/botsample.png"></img>
