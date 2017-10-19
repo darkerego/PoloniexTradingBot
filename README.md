@@ -30,4 +30,4 @@ optional arguments:
 </pre>
 ### Sample Run:
 
-<img src="https://s1.postimg.org/6mcmemtq5r/botsample.png"></img>
+<img src="https://s1.postimg.org/72owgckzcf/botsample.png"></img>
