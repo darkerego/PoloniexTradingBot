@@ -4,6 +4,8 @@
 <p> I have made some improvements to the initial code. I am still not certain if this this bot actually makes money or not. </p>
 <p> You need the good poloniex api : [https://github.com/s4w3d0ff/python-poloniex] and termcolor, see the requirements.txt.  </p>
 
+[!sample run](https://s1.postimg.org/6mcmemtq5r/botsample.png)
+
 <pre>
 python TradingBot.py -h
 usage: TradingBot.py [-h] [-p PAIR] [-i INTERVAL] [-a AMOUNT] [-f FEE] [-v]
