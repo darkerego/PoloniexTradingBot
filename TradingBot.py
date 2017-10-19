@@ -30,22 +30,21 @@ def sum(array):
 
 
 
-secret = False # change to your api key
-key = False # change to your api secret
-
-def main(argv):
-        if not secret and key:
-            print("First you must edit me and set your api key!")
-            sys.exit(1)       
-
+#secret = False # change to your api key
+#key = False # change to your api secret
+import api_conf
+secret = str(api_conf.key)
+key = str(api_conf.secret)
+def main(argv):    
 	parser = argparse.ArgumentParser(description='Poloniex Trading Bot')
 	parser.add_argument('-p', '--pair', default='BTC_ETH', type=str, required=False, help='Coin pair to trade between [default: BTC_ETH]')
 	parser.add_argument('-i', '--interval', default=1, type=float, required=False, help='seconds to sleep between loops [default: 1]')
 	parser.add_argument('-a', '--amount', default=1.01, type=float, required=False, help='amount to buy/sell [default: 1.01]')
-	parser.add_argument('-v', '--verbose', action='store_true', required=False, help='enables extra console messages (for debugging)')
-        parser.add_argument('-D', '--dry_run', action='store_true', required=False, help='Do not actually trade (for debugging)')
-        parser.add_argument('-o', '--override', action='store_true', required=False, help='Sell anyway, do not wait to buy first. (for debugging)')
-        parser.add_argument('-u', '--usdt_anchor', action='store_true', required=False, help='Attempt to buy/sell from/to usdt when oppurtune, default=False') # not yet implemented
+	parser.add_argument('-f', '--fee', default=1.0015, type=float, required=False, help='Taker fee to calculate into buys/sells [default: 1.0015 (.15%)]')
+	parser.add_argument('-v', '--verbose', action='store_true', default=False, required=False, help='enables extra console messages (for debugging)')
+        parser.add_argument('-D', '--dry_run', action='store_true', required=False, default=False, help='Do not actually trade (for debugging)')
+        parser.add_argument('-o', '--override', action='store_true', required=False, default=False, help='Sell anyway, do not wait to buy first. (for debugging)')
+        parser.add_argument('-u', '--usdt_anchor', action='store_true', required=False, default=False, help='Attempt to buy/sell from/to usdt when oppurtune, default=False') # not yet implemented
 
 	args = parser.parse_args()
         bought = False
@@ -58,39 +57,26 @@ def main(argv):
 	btc_value = 0.0
 	btc_value_ = 0.0
 	lastAsk_usdt = 0.0
-	
+	buys = 0
+	sells= 0
+	this_fee = 0.0
+	this_sale = 0.0
 	lastPrice_usdt = 0.0
 	lastPrice_usdt_ = 0.0
 	lastAsk_usdt_ = 0.0
 	bought_value = 0.0
 	usdt_value = 0.0
-	usdt_anchor=False
-        if usdt_anchor:
-            usdt_anchor = True
-        
+	usdt_anchor = args.usdt_anchor
+        fee = args.fee
 	override = args.override
-	if override:
-            override = True
-        else:
-            override = False
 	interval = args.interval
 	pair = args.pair
-	
 	amt = args.amount
         amt = float(amt)
         _amt = 100 - (amt * 100)
         amt_buy = (100 + _amt) * 0.01
-        
-        dry = args.dry_run
-        if dry:
-            dry_run=True
-        else:
-            dry_run=False
+        dry_run = args.dry_run
         verbose = args.verbose
-        if verbose:
-            verbose = True
-        else:
-            verbose=False
 	cpair = pair.split('_')
 	coin0 = cpair[0]
 	coin1 = cpair[1]
@@ -98,11 +84,16 @@ def main(argv):
 	cpair_usdt_ = "USDT"+"_"+str(cpair[0])
 	cpair_btc = "BTC"+"_"+str(cpair[1])
 	cpair_btc_ = "BTC"+"_"+str(cpair[0])
-	
+	price_of_btc = 0.0
 	pair_ = cpair_usdt
 	print(colored("Darkerego's Trade bot", 'red', attrs=['dark']))
 	print(colored("Buy percent: %s" % amt_buy, 'green'))
         print(colored("Sell percent: %s" % amt, 'red'))
+        if usdt_anchor: print("USDT anchor profit enabled")
+        if override: print("Override enabled [deprecated]")
+        if dry_run: print("Dry run mode on")
+        if verbose: print("Verbose mode on")
+        if verbose: print("Fee: %.8f" % fee)
         data = poloniex.Poloniex(secret, key)
 	#demo = test()
 	while True:
@@ -118,12 +109,8 @@ def main(argv):
 		chartData = data.returnChartData(pair, 900, timeNow - 28800, timeNow)
 		for candle in chartData:
 			chartClose.append(candle['close'])
-			#if debug:
-			    #print(chartClose)
-		
-		ema1 = sum(chartClose[0:16]) / 16
-		#ema1 = float(ema1)
-		
+
+		ema1 = sum(chartClose[0:16]) / 16		
 		if debug:
  		    print("ema1: "+str(ema1))
 		ema2 = sum(chartClose[16:24]) / 8
@@ -150,11 +137,10 @@ def main(argv):
                 except:
                     pass
                 if bought_at == 0.0:
-                    #if debug: print("No buys yet")
+                    if debug: print("No buys yet")
 		    buyTarget = min(ema1, ema2) * amt_buy
 		    
 		else:
-                    #print(bought_at)
                     buyTarget = bought_at * amt_buy
 		    sellTarget = bought_at * amt
                 try:
@@ -188,28 +174,51 @@ def main(argv):
 		    
                 try:
                     orders = data.returnOrderBook()
-                    orderBook = orders(pair)
+                except Exception:
+                    print("FATAL: Cannot get price!")
                     
-                    lastAsk = orders['asks'][0]
-                    lastBid = orders['bids'][0]
+                else:
+                    
+                    """orderBook = orders[pair]
+                    lastAsk = orderBook['asks'][0]
+                    lastBid = orderBook['bids'][0]
                     lastAsk = float(lastAsk[0])
                     lastBid = float(lastBid[0])
-                    orderBook_ = orders(pair_)
-                    lastAsk_ = orders['asks'][0]
-                    lastBid_ = orders['bids'][0]
+                    orderBook_ = orders[pair_]
+                    lastAsk_ = orderBook_['asks'][0]
+                    lastBid_ = orderBook_['bids'][0]
                     lastAsk_ = float(lastAsk[0])
-                    lastBid_ = float(lastBid[0])
+                    lastBid_ = float(lastBid[0])"""
+                    orderBook = orders[pair]
+                    # using the real api (see readme):
+                    #example:  data.returnOrderBook()['BTC_ETH']['asks'][0]
                     
+                    lastAsk = orderBook['asks'][0]
+                    lastBid = orderBook['bids'][0]
+                    # change type from list to float
+                    lastAsk = float(lastAsk[0])
+                    lastBid = float(lastBid[0])
+                    orderBook_ = orders[pair_]
+                    lastAsk_ = orderBook_['asks'][0]
+                    lastBid_ = orderBook_['bids'][0]
+                    lastAsk_ = float(lastAsk_[0])
+                    lastBid_ = float(lastBid_[0])
+                    
+                
+                try:
+                    price_of_btc = float(ticker['USDT_BTC']['last'])
                 except:
-                    pass
+                    price_of_btc = 0.0    
                 
                 lastAsk_usdt = float(ticker[cpair_usdt]['last'])
                 lastBid_usdt = float(ticker[cpair_usdt]['highestBid'])
                 lastAsk_usdt_ = float(ticker[cpair_usdt_]['last'])
                 lastBid_usdt_ = float(ticker[cpair_usdt_]['highestBid'])
                 lastAsk_btc = float(ticker[cpair_btc]['last'])
-                lastAsk_btc_ = float(ticker[cpair_btc_]['last'])
-
+                try:
+                    lastAsk_btc_ = float(ticker[cpair_btc_]['last'])
+                except KeyError:
+                    lastAsk_btc_ = 0.0
                 btc_value = lastAsk_btc * bal
                 btc_value_ = lastAsk_btc_ * _bal
                 usdt_value_ = lastAsk_usdt_ * _bal
@@ -219,27 +228,19 @@ def main(argv):
 		diff = (sellTarget - buyTarget)
 		value = bal * lastPrice
                 #value = str(value)
-		pair__ = colored(str(pair), 'yellow')
-		"""
-		print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair))
-		print('Last price : %.8f' %(lastPrice))
-		print('EMA 1 : %.8f' %ema1)
-		print('EMA 2 : %.8f' %ema2)
-                print('EMA 3 : %s' %(ema3))
-		print('Value : %.8f' %(value))
-		print('%s Balance : %.8f' % (coin0,_bal))
-		print('%s Balance: %.8f' % (coin1,bal))
-		print('Buy target : %.8f' %buyTarget)
-		print('Sell target : %.8f' %sellTarget)
-		print('Buy limit : %.8f' %(minPrice * 1.002))
-		print('Sell limit : %.8f' %(maxPrice * 0.999))
-		"""
+		#pair__ = colored(str(pair), 'yellow')
+
+		
                 
-                print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair__))
-                print('Last price : ')+ colored('%.8f' %(lastPrice), 'magenta',attrs=['blink'])
+                pair__ = colored(str(pair), 'yellow')
+                coin0_col = colored(coin0, 'magenta')
+                coin1_col = colored(coin1, 'red')
+                print(colored('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()) + ' %s :' % (pair__), 'yellow',attrs=['bold']))
+                print('Last ')+coin1_col+" : "+colored('%.8f' %(lastPrice), 'red',attrs=['underline'])
                 print('Current ask : ')+ colored('%.8f' %(lastAsk), 'blue',attrs=['dark'])
                 print('Current bid : ')+ colored('%.8f' %(lastBid), 'cyan',attrs=['dark'])
-                print('Last price usdt : ')+ colored('%.8f' %(lastPrice_), 'magenta',attrs=['blink'])
+                col_usdt=colored("USDT", 'green')
+                print('Last ')+col_usdt+" : "+ colored('%.8f' %(lastPrice_), 'green',attrs=['underline'])
                 print('Current ask usdt: ')+coin1+" "+colored('%.8f' %(lastAsk_usdt), 'green',attrs=['dark'])
                 print('Current bid usdt: ')+coin1+" "+ colored('%.8f' %(lastBid_usdt), 'cyan',attrs=['dark'])
                 print('USDT Difference: %.8f' % usdt_diff)
@@ -250,12 +251,14 @@ def main(argv):
                 strbtc_value = str(btc_value)
                 print('BTC Value: %s : %s ' % (coin1, strbtc_value))
                 strbtc_value_ = str(btc_value_)
-                print('BTC Value: %s : %s ' % (coin0, strbtc_value_))
-                
+                if coin0 != 'BTC':
+                    print('BTC Value: %s : %s ' % (coin0, strbtc_value_))
+                col_price_of_btc = colored(price_of_btc, 'yellow', attrs=['underline'])    
+                print("Last ")+(colored("BTC : %s " % col_price_of_btc, 'yellow'))
                 
                 print('EMA 1 : %.8f' %ema1)
                 print('EMA 2 : %.8f' %ema2)
-                print('EMA 3 : %s' %(ema3))
+                print('Average : %s' %(ema3))
                 print('%s Value : %.8f' %(coin1,value))
                 
                 usdt_bal = colored(float(bal_usdt), 'cyan', attrs=['dark'])
@@ -265,6 +268,7 @@ def main(argv):
                 bal1_ = colored(float(bal), 'blue')
                 print('%s Balance: %s' % (coin1,bal1_))
                 if verbose: print("Difference: %.8f" % diff)
+                #buytarget__ = ExtendedContext.to_eng_string(buyTarget)
                 buyTarget_=colored(float(buyTarget), 'green')
                 print('Buy target : %s' %buyTarget_)
                 if bought_at != 0 :
@@ -276,11 +280,15 @@ def main(argv):
                     
                 sellTarget_=colored(float(sellTarget), 'red')
                 print('Sell target : %s' %sellTarget_)
+                if buys > 0:
+                    print("Buys: %d " % buys)
+                if sells > 0:
+                   print("Sells: %d " % sells)
                 print('Buy limit : %.8f' %(minPrice * 0.99))
                 print('Sell limit : %.8f' %(maxPrice * 0.99))
 		
 		if _bal > 0.0001:
-			if (float(lastPrice) <= float(buyTarget) * amt_buy ):
+			if (float(lastPrice * fee) <= float(buyTarget) * amt_buy ):
                                 if verbose: print("DEBUG: %s lt %s" % (lastPrice,buyTarget))
                                 minPrice = min(minPrice, lastPrice)
                                 if dry_run:
@@ -296,7 +304,7 @@ def main(argv):
                                                     if not dry_run:
                                                         if verbose: print(colored("Buying...",'green'))
                                                         try:
-                                                            amt_ = float(_bal) / float(lastPrice) * 0.99
+                                                            amt_ = float(_bal) / float(lastPrice) * 0.999
                                                             if dry_run:
                                                                 
                                                                 print("Not buying because dry_run is specified")
@@ -305,7 +313,18 @@ def main(argv):
                                                                 bought = True 
                                                                 pass
                                                             else:
-                                                                data.buy(pair, (lastPrice * 1.0000001), amt_, orderType="postOnly")
+                                                                try:
+                                                                    data.buy(pair, (lastPrice * 1.0000001), amt_, orderType="postOnly")
+                                                                except Exception as e:
+                                                                    if verbose:
+                                                                        print("Error selling: %s " % e)
+                                                                else:
+                                                                        buys = buys+1
+                                                                        this_sale = (lastPrice * 1.0000001)
+                                                                        this_fee = this_sale * fee - this_sale
+                                                                        if this_fee: print("Fee: %.8f" % this_fee)
+                                                                        this_fee = 0.0
+                                                                        this_sale = 0.0
                                                                 bought_at = float(lastPrice)
                                                                 bought_value = float(value)
                                                         except Exception as ee:
@@ -336,10 +355,9 @@ def main(argv):
                             sellTarget = (max(ema1, ema2) * amt)
                         else:
                             sellTarget = bought_at * amt
-		#else:
-			if lastPrice >= sellTarget or bought_value > value:
+			if (lastPrice * fee) >= sellTarget or bought_value > value:
                                 if verbose: print("Perhaps selling...")
-				if (lastPrice < maxPrice * (amt * 0.999)) or lastPrice >= (bought_at * amt):
+				if (lastAsk < maxPrice * (amt * 0.999)) or lastAsk >= (bought_at * amt):
                                         
                                         if dry_run:
                                             print("Not selling because dry_run is specified")
@@ -347,17 +365,24 @@ def main(argv):
                                         else:
                                                 if verbose: print(colored("Selling...", 'red'))
                                                 try:
-                                                    data.sell(pair, (lastPrice * 1.0000001), (bal * 0.99), orderType="postOnly")
+                                                    data.sell(pair, (lastAsk * 1.0000001), (bal * 0.99), orderType="postOnly")
                                                 except Exception as lol:
                                                     lol = colored(lol, 'white')
                                                     if verbose: print(colored("FATAL ERROR SELLING :", 'red'))
                                                     if verbose: print(lol)
                                                     
                                                 else:
-                                                    print('Sell price : %.8f' %lastPrice)
+                                                    print('Sell price : %.8f' %lastAsk)
+                                                    this_sale = (lastAsk * 1.0000001)
+                                                    this_fee = this_sale * fee - this_sale
+                                                    if this_fee: print("Sell fee: %.8f" % this_fee) 
                                                     sellTarget = 0.0
+                                                    sells = sells+1
+                                                    this_fee = 0.0
+                                                    this_sale = 0.0
+                                                    
 				else:
-					maxPrice = max(maxPrice, lastPrice)
+					maxPrice = max(maxPrice, lastAsk)
 			else:
 				maxPrice = 0.0
 		print('***************************************************')
