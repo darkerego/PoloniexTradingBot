@@ -9,8 +9,8 @@
 ### Project Goals:
 
 - To create a poloniex trading bot that uses simple math to trade across poloniex's btc and usdt markets.
-- TODO: Create a function that checks if at any given moment it is profitable to buy from a usdt market and sell to btc market
- - or vice versa, this also should work on other markets such as ETH/ETC or LTC/XMR
+- In progress: Finish creating (a) function(s) that checks if at any given moment it is profitable to buy from a usdt market and sell to btc market
+ - or vice versa, this also should work on other markets such as ETH/ETC or LTC/XMR , say buy from BTC/ETH when it's cheaper
 
 ### Usage:
 
