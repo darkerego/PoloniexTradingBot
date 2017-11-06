@@ -4,6 +4,7 @@ import datetime
 import time
 import argparse
 import sys
+import logging
 
 try:
 	# For Python 3+
@@ -29,6 +30,9 @@ def sum(array):
 	return ret
 
 
+def printlog(info):
+        print(info)
+        logger.info(info)
 
 #secret = False # change to your api key
 #key = False # change to your api secret
@@ -40,11 +44,12 @@ def main(argv):
 	parser.add_argument('-p', '--pair', default='BTC_ETH', type=str, required=False, help='Coin pair to trade between [default: BTC_ETH]')
 	parser.add_argument('-i', '--interval', default=1, type=float, required=False, help='seconds to sleep between loops [default: 1]')
 	parser.add_argument('-a', '--amount', default=1.01, type=float, required=False, help='amount to buy/sell [default: 1.01]')
-	parser.add_argument('-f', '--fee', default=1.0015, type=float, required=False, help='Taker fee to calculate into buys/sells [default: 1.0015 (.15%)]')
+	parser.add_argument('-f', '--fee', default=1.0015, type=float, required=False, help='Taker fee to calculate into buys/sells [default: 1.0015 (.15 percent)]')
 	parser.add_argument('-v', '--verbose', action='store_true', default=False, required=False, help='enables extra console messages (for debugging)')
         parser.add_argument('-D', '--dry_run', action='store_true', required=False, default=False, help='Do not actually trade (for debugging)')
         parser.add_argument('-o', '--override', action='store_true', required=False, default=False, help='Sell anyway, do not wait to buy first. (for debugging)')
         parser.add_argument('-u', '--usdt_anchor', action='store_true', required=False, default=False, help='Attempt to buy/sell from/to usdt when oppurtune, default=False') # not yet implemented
+        parser.add_argument('-b', '--btc_tether',  action='store_true', required=False, default=False, help='Attempt to buy/sell to markets when possible')
 
 	args = parser.parse_args()
         bought = False
@@ -56,17 +61,21 @@ def main(argv):
 	lastBid = 0.0
 	btc_value = 0.0
 	btc_value_ = 0.0
+	_usdt_value = 0.0
 	lastAsk_usdt = 0.0
 	buys = 0
 	sells= 0
+	sellprice = ''
 	this_fee = 0.0
 	this_sale = 0.0
 	lastPrice_usdt = 0.0
 	lastPrice_usdt_ = 0.0
+	_lastPrice = 0.0
 	lastAsk_usdt_ = 0.0
 	bought_value = 0.0
 	usdt_value = 0.0
 	usdt_anchor = args.usdt_anchor
+	btc_tether = args.btc_tether
         fee = args.fee
 	override = args.override
 	interval = args.interval
@@ -80,20 +89,21 @@ def main(argv):
 	cpair = pair.split('_')
 	coin0 = cpair[0]
 	coin1 = cpair[1]
-	cpair_usdt = "USDT"+"_"+str(cpair[1])
-	cpair_usdt_ = "USDT"+"_"+str(cpair[0])
-	cpair_btc = "BTC"+"_"+str(cpair[1])
-	cpair_btc_ = "BTC"+"_"+str(cpair[0])
+	cpair_usdt_coin1 = "USDT"+"_"+str(cpair[1])
+	cpair_usdt_coin0 = "USDT"+"_"+str(cpair[0])
+	cpair_btc_coin1 = "BTC"+"_"+str(cpair[1])
+	cpair_btc_coin0 = "BTC"+"_"+str(cpair[0])
 	price_of_btc = 0.0
-	pair_ = cpair_usdt
+	pair_ = cpair_usdt_coin1
+	_pair = cpair_usdt_coin0
 	print(colored("Darkerego's Trade bot", 'red', attrs=['dark']))
 	print(colored("Buy percent: %s" % amt_buy, 'green'))
         print(colored("Sell percent: %s" % amt, 'red'))
-        if usdt_anchor: print("USDT anchor profit enabled")
-        if override: print("Override enabled [deprecated]")
-        if dry_run: print("Dry run mode on")
-        if verbose: print("Verbose mode on")
-        if verbose: print("Fee: %.8f" % fee)
+        if usdt_anchor: printlog("USDT anchor profit enabled")
+        if override: printlog("Override enabled [deprecated]")
+        if dry_run: printlog("Dry run mode on")
+        if verbose: printlog("Verbose mode on")
+        if verbose: printlog("Fee: %.8f" % fee)
         data = poloniex.Poloniex(secret, key)
 	#demo = test()
 	while True:
@@ -102,10 +112,7 @@ def main(argv):
 		if timeNow % 900 != 0:
 			timeNow = timeNow / 900 * 900
 		ticker = data.returnTicker()
-		lastPrice = float(ticker[pair]['last'])
-		lastPrice_ = float(ticker[pair_]['last'])
-		#
-
+		
 		chartData = data.returnChartData(pair, 900, timeNow - 28800, timeNow)
 		for candle in chartData:
 			chartClose.append(candle['close'])
@@ -165,34 +172,44 @@ def main(argv):
 		    bal = float(bal)
 		    
 		try:
-                    bal_usdt = bals['exchange']['usdt']
+                    bal_usdt = bals['exchange']['USDT']
                 except KeyError:
                     if debug: print('Likely balance is 0')
 		    bal_usdt = float(0.0)
 		else:
 		    bal_usdt = float(bal_usdt)
-		    
+
+		try:
+                    bal_btc = bals['exchange']['BTC']
+                except:
+                    if debug: print('Likely balance is 0')
+		    bal = float(0.0)
+                    
                 try:
                     orders = data.returnOrderBook()
                 except Exception:
                     print("FATAL: Cannot get price!")
                     
                 else:
-                    
-                    """orderBook = orders[pair]
-                    lastAsk = orderBook['asks'][0]
-                    lastBid = orderBook['bids'][0]
-                    lastAsk = float(lastAsk[0])
-                    lastBid = float(lastBid[0])
-                    orderBook_ = orders[pair_]
-                    lastAsk_ = orderBook_['asks'][0]
-                    lastBid_ = orderBook_['bids'][0]
-                    lastAsk_ = float(lastAsk[0])
-                    lastBid_ = float(lastBid[0])"""
                     orderBook = orders[pair]
                     # using the real api (see readme):
-                    #example:  data.returnOrderBook()['BTC_ETH']['asks'][0]
-                    
+                    #example:  data.returnOrderBook()['ETH_ETC']['asks'][0]
+                    lastPrice = float(ticker[pair]['last'])
+                    # example: data.returnOrderBook()[BTC_ETC]['last'][0]
+                    try:
+		        lastPrice_ = float(ticker[cpair_usdt_coin1]['last'])
+		    except KeyError:
+                        lastPrice_ = 0.0
+                        
+		    # example: data.returnOrderBook()[BTC_ETH]['last'][0]
+		    try:
+		        _lastPrice = float(ticker[cpair_btc_coin1]['last'])
+		        _lastAsk = float(ticker[cpair_btc_coin1]['lowestAsk'])
+		        _lastBid = float(ticker[cpair_btc_coin1]['highestBid'])
+		    except Exception as wtf:
+                        print("ERR: %s" % wtf)
+                        _lastPrice = 0.0
+                        
                     lastAsk = orderBook['asks'][0]
                     lastBid = orderBook['bids'][0]
                     # change type from list to float
@@ -210,23 +227,65 @@ def main(argv):
                 except:
                     price_of_btc = 0.0    
                 
-                lastAsk_usdt = float(ticker[cpair_usdt]['last'])
-                lastBid_usdt = float(ticker[cpair_usdt]['highestBid'])
-                lastAsk_usdt_ = float(ticker[cpair_usdt_]['last'])
-                lastBid_usdt_ = float(ticker[cpair_usdt_]['highestBid'])
-                lastAsk_btc = float(ticker[cpair_btc]['last'])
+                lastAsk_usdt = float(ticker[cpair_usdt_coin1]['lowestAsk'])
+                lastBid_usdt = float(ticker[cpair_usdt_coin1]['highestBid'])
+                # XMR_LTC - LTC/USDT
                 try:
-                    lastAsk_btc_ = float(ticker[cpair_btc_]['last'])
+                     lastAsk_usdt_ = float(ticker[cpair_usdt_coin0]['last'])
                 except KeyError:
+                     lastAsk_usdt_ = 0.0
+        
+                try:
+                     lastBid_usdt_ = lastBid_usdt_ = float(ticker[cpair_usdt_coin0]['highestBid'])
+                except KeyError:
+                     lastBid_usdt_ = 0.0
+
+        
+                try:
+                    last_btc = float(ticker[cpair_btc_coin1]['last'])
+                    lastAsk_btc = float(ticker[cpair_btc_coin1]['lowestAsk'])
+                    lastBid_btc = float(ticker[cpair_btc_coin1]['highestBid'])
+                except KeyError:
+                    lastAsk_btc = 0.0
+                    lastBid_btc = 0.0
+                    last_btc = 0.0
+                # _lastAsk_btc XMR_ZEC - get BTC_XMR
+                
+                try:
+                    _lastAsk_btc= float(ticker[cpair_btc_coin0]['last'])
+                except:
+                    _lastAsk_btc = 0.0
+                else:
+                    if debug: print("Got it! %.8f" % _lastAsk_btc)
+                try:
+                    last_btc_ = float(ticker[cpair_btc_coin0]['last'])
+                    lastAsk_btc_ = float(ticker[cpair_btc_coin0]['lowestAsk'])
+                    lastBid_btc_ = float(ticker[cpair_btc_coin0]['highestBid'])
+                except KeyError as e:
+                    if debug: print("Error: %s" % e)
                     lastAsk_btc_ = 0.0
-                btc_value = lastAsk_btc * bal
-                btc_value_ = lastAsk_btc_ * _bal
-                usdt_value_ = lastAsk_usdt_ * _bal
+                    lastBid_btc_ = 0.0
+                    last_btc_ = 0.0
+                    
+                btc_value = last_btc_ * _bal
+                btc_value_ = lastAsk_btc * bal
+                
+                usdt_value = lastAsk_usdt * _bal
+                if coin0 == "BTC":
+                    usdt_value_ = price_of_btc * _bal
+                else:
+                    usdt_value_ = lastAsk_usdt_ * _bal
+                try:
+                    _usdt_value = _lastAsk_usdt * bal
+                except:
+                    _usdt_value = 0.0
                 usdt_diff_ = lastPrice_usdt_ - lastBid_usdt_
                 usdt_diff = lastPrice_usdt - lastBid_usdt
                 usdt_value = lastAsk_usdt * bal
 		diff = (sellTarget - buyTarget)
 		value = bal * lastPrice
+		value_ = _bal * lastAsk_btc
+		#usdt_value_ = lastAsk_btc_ * _bal
                 #value = str(value)
 		#pair__ = colored(str(pair), 'yellow')
 
@@ -239,11 +298,22 @@ def main(argv):
                 print('Last ')+coin1_col+" : "+colored('%.8f' %(lastPrice), 'red',attrs=['underline'])
                 print('Current ask : ')+ colored('%.8f' %(lastAsk), 'blue',attrs=['dark'])
                 print('Current bid : ')+ colored('%.8f' %(lastBid), 'cyan',attrs=['dark'])
-                col_usdt=colored("USDT", 'green')
-                print('Last ')+col_usdt+" : "+ colored('%.8f' %(lastPrice_), 'green',attrs=['underline'])
-                print('Current ask usdt: ')+coin1+" "+colored('%.8f' %(lastAsk_usdt), 'green',attrs=['dark'])
-                print('Current bid usdt: ')+coin1+" "+ colored('%.8f' %(lastBid_usdt), 'cyan',attrs=['dark'])
-                print('USDT Difference: %.8f' % usdt_diff)
+                if lastAsk_btc_ > 0.0:
+                    print('Last USDT ')+coin0_col+" : "+ colored('%.8f' %(lastAsk_usdt_), 'green',attrs=['underline'])
+                
+                if lastPrice_ > 0.0:
+                    col_usdt=colored("USDT", 'green')
+                    print('Last ')+col_usdt+" "+coin1+" : "+ colored('%.8f' %(lastPrice_), 'green',attrs=['underline'])
+                    print('Current ask usdt: ')+coin1+" "+colored('%.8f' %(lastAsk_usdt), 'green',attrs=['dark'])
+                    print('Current bid usdt: ')+coin1+" "+ colored('%.8f' %(lastBid_usdt), 'cyan',attrs=['dark'])
+                if str(coin0) != 'USDT' or str(coin0) != 'BTC':
+                    col_btc = colored((str(lastAsk_btc)), 'red')
+                    col_btc_1 = colored((str(lastAsk_btc_)), 'blue')
+                    print(colored(str("Last %s BTC: %s " % (coin1_col,col_btc)), 'magenta'))
+                    print(colored(str("Last %s BTC: %s " % (coin0_col,col_btc_1)), 'magenta',attrs=['dark']))
+                    if float(_lastAsk_btc) > float(0.0):
+                        print("Current ask usdt: "+coin0+" : "+colored(str(("%.8f" % _lastAsk_btc)), 'red'))
+                #print('USDT Difference: %.8f' % usdt_diff)
                 strusdt_value = str(usdt_value)
                 print('USDT Value: %s : %s' % (coin1, strusdt_value))
                 strusdt_value_ = str(usdt_value_)
@@ -267,6 +337,8 @@ def main(argv):
                 print('%s Balance : %s' % (coin0,bal0_))
                 bal1_ = colored(float(bal), 'blue')
                 print('%s Balance: %s' % (coin1,bal1_))
+                if coin0 != str('BTC'):
+                    print("BTC Balance: "+colored(str(bal_btc), 'yellow'))
                 if verbose: print("Difference: %.8f" % diff)
                 #buytarget__ = ExtendedContext.to_eng_string(buyTarget)
                 buyTarget_=colored(float(buyTarget), 'green')
@@ -348,8 +420,8 @@ def main(argv):
                                                         minPrice = lastPrice
 			else:
 				minPrice = 0.0
-		#if bought_at != 0 or override or bal > 0.00001 or bought_value > value or bought:
-		else:
+		if float(bal) > 0.001 or override or bought_value > value:
+		#else:
                        
                         if bought_at == 0:    
                             sellTarget = (max(ema1, ema2) * amt)
@@ -385,9 +457,102 @@ def main(argv):
 					maxPrice = max(maxPrice, lastAsk)
 			else:
 				maxPrice = 0.0
-		print('***************************************************')
 
+		# HIGHLY EXPERIMENTAL! 
+		if usdt_anchor and coin0 != str('USDT'):
+                    if (float(lastPrice * price_of_btc * fee) < float(lastPrice_ * fee)) and bal_usdt > 0.0:
+                        try:
+                            data.buy(cpair_usdt_coin1, (lastPrice_ * 1.0000001), (bal_usdt * 0.999), orderType="postOnly")
+                        except Exception as e:
+                            if verbose: print("Error selling: %s" % e)
+                        else:
+                             print(colored("Bought in usdt: %.8f at %.8f" % (bal_usdt,lastPrice_),'green'))
+                             buys=buys+1
+                    elif (float(lastPrice * price_of_btc * fee) > float(lastPrice_ * fee)) and float(bal) > 0.0:
+                        try:
+                            data.sell(cpair_usdt_coin1, (lastPrice_ * 1.0000001), (bal * 0.999), orderType="postOnly")
+                        except Exception as e:
+                            if verbose: print("Error selling: %s" % e)
+                        else:
+                            print(colored("Sold in usdt: %.8f at %.8f" % (bal_usdt,lastPrice_),'red'))
+                            sells = sells+1
+                            
+                    
+                # HIGHLY EXPERIMENTAL!              
+                if coin0 == str('USDT'):
+                        if (lastAsk_btc / price_of_btc) * fee < lastPrice_ * fee and bal > 0.00001:
+                            try:
+                                data.sell(cpair_usdt_coin1, (lastAsk_btc * 1.0000001), (bal * 0.9999), orderType="postOnly")
+                            except Exception as lol:
+                                lol = colored(lol, 'white')
+                                if verbose: print(colored("FATAL ERROR SELLING :", 'red'))
+                                if verbose: print(lol)
+                            
+                            else:
+                                sell_price = (lastAsk_btc * 1.0000001)
+                                print('Sell price : %.8f' %sell_price)
+                                this_sale = (sell_price * 1.0000001)
+                                this_fee = sell_price * fee - this_sale
+                                if this_fee: print("Sell fee: %.8f" % this_fee) 
+                                #sellTarget = 0.0
+                                sells = sells+1
+                                this_fee = 0.0
+                                this_sale = 0.0
+                    #if ( price_of_btc / lastAsk_usdt_ ) * fee
+                # HIGHLY EXPERIMENTAL! 
+                if coin0 != 'BTC' and btc_tether:
+                     in_btc = float((lastAsk_btc * (price_of_btc * _bal)) * fee)
+                     in_coin = float(lastAsk_ * _bal * fee)
+                     btc_diff_ = in_coin - in_btc
+                     in_btc_ = float((last_btc_ * btc_value_) * fee)
+                     in_coin_ = float(lastAsk * bal * fee)
+                     btc_diff = float(in_coin_) - float(in_btc_)
+                     if verbose: print("DEBUG: %.8f - %.8f" % (in_btc,in_coin))
+                     if float(in_btc) < float(in_coin) and float(btc_diff_) > 0.0:
+                         
+                         #print("BTC buy oppurtunity: %.8f difference" % btc_diff_)
+                         
+                         print("BTC sell oppurtunity: %.8f difference" % (btc_diff_))
+                         try:
+                            sell_price = (lastAsk_btc * 1.000001)
+                            if verbose: print("Attempted sell price: %.8f" % sell_price)
+                            btc_amt = (_bal * 0.33)
+                            data.sell(cpair_btc_coin1, sell_price, btc_amt, orderType="fillOrKill")
+                         except Exception as fuckit:
+                            if verbose: print(colored("FATAL ERROR SELLING : %s" % fuckit, 'red'))
+                         else:
+                             sell_price = (lastBid_btc * 1.0000001)
+                             print('Sell price : %.8f' %sell_price)
+                             this_sale = (sell_price * 1.0000001)
+                             this_fee = sell_price * fee - this_sale
+                             if this_fee: print("Sell fee: %.8f" % this_fee)
+                             sells = sells+1
+                             this_fee = 0.0
+                             this_sale = 0.0
+                     
 
+                     elif float(in_btc_) > float(in_coin_):   
+                        
+                        print("BTC buy oppurtunity: %.8f - %.8f : %.8f difference" % (in_coin,in_btc,btc_diff))
+                        try:
+                            data.buy(cpair_btc_coin1, (lastAsk_btc_ * 1.0000001) (bal * 0.33), orderType="fillOrKill")
+                        except Exception as fuckit:
+                            if verbose: print(colored("FATAL ERROR SELLING : %s" % fuckit, 'red'))
+                        else:
+                            if verbose:
+                                print("Error selling: %s " % e)
+                            else:
+                                buys = buys+1
+                                this_sale = (lastAsk_btc * 1.0000001)
+                                this_fee = this_sale * fee - this_sale
+                                if this_fee: print("Fee: %.8f" % this_fee)
+                                this_fee = 0.0
+                                this_sale = 0.0
+                                                                   
+                            
+                            
+                     
+                print('***************************************************')
 
                 try:
 		     time.sleep(int(interval))
@@ -396,6 +561,12 @@ def main(argv):
                      sys.exit(0)
                      
 if __name__ == "__main__":
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler('tradebot.log')
+        handler.setLevel(logging.INFO)
+        logger.addHandler(handler)
+        logger.info('Start bot at '+time.asctime())
         while True:
             try:
 	        main(sys.argv[1:])
