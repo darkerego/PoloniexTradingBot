@@ -28,7 +28,7 @@ python TradingBot.py -D
 
 ###### Sample Run:
 
-<img src="https://s1.postimg.org/72owgckzcf/botsample.png"></img>
+<img src="https://s1.postimg.org/22ad73qgtr/botsample-new.png"></img>
 
 
 <pre>
