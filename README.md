@@ -34,7 +34,7 @@ python TradingBot.py -D
 <pre>
 python TradingBot.py -h
 usage: TradingBot.py [-h] [-p PAIR] [-i INTERVAL] [-a AMOUNT] [-f FEE] [-v]
-                      [-D] [-o] [-u]
+                        [-D] [-o] [-u] [-b]
 
 Poloniex Trading Bot
 
@@ -52,6 +52,8 @@ optional arguments:
   -o, --override        Sell anyway, do not wait to buy first. (for debugging)
   -u, --usdt_anchor     Attempt to buy/sell from/to usdt when oppurtune,
                         default=False
+  -b, --btc_tether      Attempt to buy/sell to markets when possible
+
 
 </pre>
 
