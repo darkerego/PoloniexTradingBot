@@ -72,8 +72,7 @@ optional arguments:
                         config .cfg file
   -p PAIR, --pair PAIR  Get ticker information for this pair (example:
                         BTC_ETH)
-  -b, --balances        Get ticker information for this pair (default:
-                        BTC_ETH)
+  -b, --balances       Get account balances 
   -H HISTORY, --history HISTORY
                         print market history data for given pair
   -g GEN_ADDR, --gen_addr GEN_ADDR
