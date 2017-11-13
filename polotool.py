@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Poloniex API Wrapper ~ DarkerEgo 2017
 #######################################
-
+""" Skeleton for implimenting poloniex api functions """
 
 import logging
 import argparse
