@@ -8,7 +8,8 @@
 
 ### Project Goals:
 
-- To create a poloniex trading bot that uses simple math to trade across poloniex's btc and usdt markets.
+- To create a poloniex trading bot that uses simple math to trade across poloniex's btc and usdt markets. 
+- Create a poloniex api wrapper tool (to generate a new deposite address, or grab balances, etc)
 - In progress: Finish creating (a) function(s) that checks if at any given moment it is profitable to buy from a usdt market and sell to btc market
  - or vice versa, this also should work on other markets such as ETH/ETC or LTC/XMR , say buy from BTC/ETH when it's cheaper
 
@@ -57,4 +58,26 @@ optional arguments:
 
 </pre>
 
+###### Polotool
+
+<pre>
+python3 polotool.py -h
+usage: polotool.py [-h] [-c CONFIG] [-p PAIR] [-b] [-H HISTORY] [-g GEN_ADDR]
+
+Generic Parser
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        config .cfg file
+  -p PAIR, --pair PAIR  Get ticker information for this pair (example:
+                        BTC_ETH)
+  -b, --balances        Get ticker information for this pair (default:
+                        BTC_ETH)
+  -H HISTORY, --history HISTORY
+                        print market history data for given pair
+  -g GEN_ADDR, --gen_addr GEN_ADDR
+                        Generate a new deposite address for supplied currency
+                        (example: BTC)
+</pre>
 
