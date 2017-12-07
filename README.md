@@ -1,6 +1,6 @@
 # Poloniex TradingBot
 
-<i>This is a Proof of Concept, still in development, do not use in production with lots money! </i>
+<i>This is a Proof of <s>Concept</s> Crap [honestly], still in development, do not use in production with lots money! </i> 
 
 <p> I have made some improvements to the initial code. I am still not certain if this this bot actually makes money or not. </p>
 <p> Update: Added some static python function/files to do things like get balances, generate new deposite addresses, grab your trade history, and get the current market charts. They are 'extras' and are not used in the actual TradingBot.py program.</p>
